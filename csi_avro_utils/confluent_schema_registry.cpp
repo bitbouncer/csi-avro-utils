@@ -86,7 +86,8 @@ namespace confluent
         return p;
     }
 
-    registry::registry(boost::asio::io_service& ios, std::string address) :
+	registry::registry(boost::asio::io_service& ios, std::string address) :
+		_ios(ios),
         _http(ios),
         _address(address)
     {
@@ -203,4 +204,16 @@ namespace confluent
          //exception???
          return NULL;
     }
+
+
+	 //int32_t registry::get_cached_schema(boost::shared_ptr<avro::ValidSchema> p)
+	 //{
+		// //lookup in cache first
+		// //mutex???
+		// std::map<int32_t, boost::shared_ptr<avro::ValidSchema>>::const_iterator item = _registry.find(id);
+		// if (item != _registry.end())
+		//	 return item->second;
+
+	 //}
+
 }; // namespace
