@@ -17,30 +17,29 @@ namespace confluent
 				//mutex..
 				_schema2id[schema] = id;
 				_id2schema[id]     = schema;
-				cb(SUCCESS, id);
+				cb(codec::put_schema_result(SUCCESS, id));
 				return;
 			}
 			else
 			{
-				cb(NO_CONNECTION, 0);
+				cb(codec::put_schema_result(NO_CONNECTION, 0));
 				return;
 			}
 		});
 	}
 
-	int32_t codec::put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema)
+	codec::put_schema_result codec::put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema)
 	{
-		std::promise<int32_t> p;
-		std::future<int32_t>  f = p.get_future();
-		put_schema(name, schema, [&p](int32_t ec, int32_t id)
+		std::promise<codec::put_schema_result> p;
+		std::future<codec::put_schema_result>  f = p.get_future();
+		put_schema(name, schema, [&p](codec::put_schema_result result)
 		{
-			p.set_value(ec);
+			p.set_value(result);
 		});
 		f.wait();
 		return f.get();
 	}
-
-
+	
 	void codec::get_schema(int32_t id, get_schema_callback cb)
 	{
 		//mutex..
@@ -82,6 +81,21 @@ namespace confluent
 		return f.get();
 	}
 
+	void codec::encode_nonblock(int32_t id, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream& dst)
+	{
+#ifdef _DEBUG
+		//mutex..
+		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>>::const_iterator item = _id2schema.find(id);
+		assert(item != _id2schema.end());
+#endif
+		avro::EncoderPtr e = avro::binaryEncoder();
+		e->init(dst);
+		avro::encode(*e, id);
+		avro::encode(*e, *src);
+		// push back unused characters to the output stream again... really strange... 			
+		// otherwise content_length will be a multiple of 4096
+		e->flush();
+	}
 
 	int32_t codec::encode_nonblock(boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream& dst)
 	{
@@ -102,19 +116,19 @@ namespace confluent
 
 	void codec::encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst, encode_callback cb)
 	{
-		put_schema(name, schema, [this, schema, src, dst, cb](int32_t ec, int32_t id)
+		put_schema(name, schema, [this, schema, src, dst, cb](codec::put_schema_result result)
 		{
-			if (ec)
+			if (result.first)
 			{
-				cb(ec);
+				cb(result.first);
 				return;
 			}
 
-			if (id > 0)
+			if (result.second > 0)
 			{
 				avro::EncoderPtr e = avro::binaryEncoder();
 				e->init(*dst);
-				avro::encode(*e, id);
+				avro::encode(*e, result.second);
 				avro::encode(*e, *src);
 				// push back unused characters to the output stream again... really strange... 			
 				// otherwise content_length will be a multiple of 4096

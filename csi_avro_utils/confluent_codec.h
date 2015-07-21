@@ -25,19 +25,67 @@ namespace confluent
 		typedef std::pair<int32_t, boost::shared_ptr<avro::ValidSchema>>  get_schema_result;
 		typedef boost::function <void(get_schema_result)>			      get_schema_callback;
 
-		typedef boost::function <void(int32_t ec, int32_t id)>			  put_callback;
+		typedef std::pair<int32_t, int32_t>                               put_schema_result;
+		typedef boost::function <void(put_schema_result)>			      put_callback;
 
 		codec(confluent::registry&);
 
-		void    put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema>, put_callback);
-		int32_t put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema>);
+		void                 put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema>, put_callback);
+		put_schema_result    put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema>);
 
 		void                 get_schema(int32_t id, get_schema_callback);
 		get_schema_result    get_schema(int32_t id);
 
+		void    encode_nonblock(int32_t id, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream& dst);
 		int32_t encode_nonblock(boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream& dst);
 		void    encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst, encode_callback);
 		int32_t encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst);
+
+		template<typename T>
+		void encode_nonblock(int32_t id, const T& src, avro::OutputStream& dst)
+		{
+#ifdef _DEBUG
+			//mutex..
+			std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(id);
+			assert(item != _id2schema.end());
+#endif
+			avro::EncoderPtr e = avro::binaryEncoder();
+			e->init(dst);
+			avro::encode(*e, id);
+			avro::encode(*e, src);
+			// push back unused characters to the output stream again... really strange... 			
+			// otherwise content_length will be a multiple of 4096
+			e->flush();
+		}
+
+		template<typename T>
+		bool decode_static(avro::InputStream* src, int32_t id, T& dst)
+		{
+#ifdef _DEBUG
+			//mutex..
+			std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(id);
+			assert(item != _id2schema.end());
+#endif
+			int32_t schema_id;
+			avro::DecoderPtr e = avro::binaryDecoder();
+			e->init(*src);
+			
+			avro::decode(*e, schema_id);
+			if (id != schema_id)
+			{
+				return false;
+			}
+
+			try
+			{
+				avro::decode(*e, dst);
+			}
+			catch (...)
+			{
+				return false;
+			}
+			return true;
+		}
 
 		decode_result decode_datum_nonblock(avro::InputStream* src);
 		void		  decode_datum(avro::InputStream* src, decode_callback);
