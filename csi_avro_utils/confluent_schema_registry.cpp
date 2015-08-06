@@ -3,9 +3,9 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/make_shared.hpp>
-#include <json_spirit/json_spirit.h>
-#include <csi_http/json_encoding.h>
 #include <avro/Compiler.hh>
+#include <csi_http/encoding/avro_json_spirit_encoding.h>
+#include "csi_avro_utils/utils.h"
 #include "confluent_schema_registry.h"
 
 namespace confluent

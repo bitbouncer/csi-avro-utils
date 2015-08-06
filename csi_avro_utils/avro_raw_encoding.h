@@ -1,0 +1,1 @@
+#include <csi_http/encoding/avro_raw_binary_encoding.h>

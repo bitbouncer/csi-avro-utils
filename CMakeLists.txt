@@ -10,5 +10,7 @@ set(EXT_LIBS csi-avro-utils ${CSI_HTTP_LIBS})
 endif()
 
 add_subdirectory(csi_avro_utils)
+add_subdirectory(programs)
+add_subdirectory(tests)
 
 

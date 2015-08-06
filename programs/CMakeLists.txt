@@ -1,0 +1,2 @@
+add_subdirectory(csi_avrogencpp)
+add_subdirectory(avro_normalize_schema)
