@@ -42,23 +42,33 @@ namespace confluent
 		int32_t encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst);
 
 		template<typename T>
-		void encode_nonblock(int32_t id, const T& src, avro::OutputStream& dst)
+        void encode_nonblock(int32_t schema_id, const T& value, avro::OutputStream& dst)
 		{
 #ifdef _DEBUG
 			//mutex..
-			std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(id);
+            std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(schema_id);
 			assert(item != _id2schema.end());
 #endif
 			avro::EncoderPtr e = avro::binaryEncoder();
 			e->init(dst);
-			avro::encode(*e, id);
-			avro::encode(*e, src);
+            avro::encode(*e, schema_id);
+            avro::encode(*e, value);
 			// push back unused characters to the output stream again... really strange... 			
 			// otherwise content_length will be a multiple of 4096
 			e->flush();
 		}
 
-		template<typename T>
+        //does this work? with the memoryOutputStream being a local and returning a memoryInputStream????
+        template<typename T>
+        std::auto_ptr<avro::InputStream> encode_nonblock(int32_t schema_id, const T& value)
+        {
+            auto ostr = avro::memoryOutputStream();
+            encode_nonblock(schema_id, value, *ostr);
+            size_t sz = ostr->byteCount();
+            return avro::memoryInputStream(*ostr);
+        }
+
+        template<typename T>
 		bool decode_static(avro::InputStream* src, int32_t id, T& dst)
 		{
 #ifdef _DEBUG
@@ -87,12 +97,37 @@ namespace confluent
 			return true;
 		}
 
-		decode_result decode_datum_nonblock(avro::InputStream* src);
+        decode_result decode_datum_nonblock(avro::InputStream* src);
 		void		  decode_datum(avro::InputStream* src, decode_callback);
 		decode_result decode_datum(avro::InputStream* src);
 
+        template<typename T>
+        inline bool decode_static(const uint8_t* src, size_t len, int32_t id, T& dst)
+        {
+            std::auto_ptr<avro::InputStream> stream = avro::memoryInputStream(src, len);
+            return decode_static(&*stream, id, dst);
+        }
+
+        inline decode_result decode_datum_nonblock(const uint8_t* src, size_t len)
+       {
+            std::auto_ptr<avro::InputStream> stream = avro::memoryInputStream(src, len);
+            return decode_datum_nonblock(&*stream);
+        }
+
+        inline void decode_datum(const uint8_t* src, size_t len, decode_callback cb)
+        {
+            std::auto_ptr<avro::InputStream> stream = avro::memoryInputStream(src, len);
+            decode_datum(&*stream, cb);
+        }
+
+        inline decode_result decode_datum(const uint8_t* src, size_t len)
+        {
+            std::auto_ptr<avro::InputStream> stream = avro::memoryInputStream(src, len);
+            return decode_datum(&*stream);
+        }
+
 	private:
-		confluent::registry& _registry;
+		confluent::registry&                                    _registry;
 		std::map<boost::shared_ptr<avro::ValidSchema>, int32_t> _schema2id;
 		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> _id2schema;
 	};
