@@ -58,15 +58,23 @@ namespace confluent
 			e->flush();
 		}
 
-        //does this work? with the memoryOutputStream being a local and returning a memoryInputStream????
-        template<typename T>
-        std::auto_ptr<avro::InputStream> encode_nonblock(int32_t schema_id, const T& value)
-        {
-            auto ostr = avro::memoryOutputStream();
-            encode_nonblock(schema_id, value, *ostr);
-            size_t sz = ostr->byteCount();
-            return avro::memoryInputStream(*ostr);
-        }
+        //does this work? with the memoryOutputStream being a local and returning a memoryInputStream???? NOPE! 
+        //template<typename T>
+        //std::auto_ptr<avro::InputStream> encode_nonblock(int32_t schema_id, const T& value)
+        //{
+        //    auto ostr = avro::memoryOutputStream();
+        //    encode_nonblock(schema_id, value, *ostr);
+        //    size_t sz = ostr->byteCount();
+        //    return avro::memoryInputStream(*ostr);
+        //}
+
+		template<typename T>
+		std::auto_ptr<avro::OutputStream> encode_nonblock(int32_t schema_id, const T& value)
+		{
+			auto ostr = avro::memoryOutputStream();
+			encode_nonblock(schema_id, value, *ostr);
+			return ostr;
+		}
 
         template<typename T>
 		bool decode_static(avro::InputStream* src, int32_t id, T& dst)
