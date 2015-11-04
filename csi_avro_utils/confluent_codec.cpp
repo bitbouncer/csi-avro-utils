@@ -211,4 +211,17 @@ namespace confluent
 		f.wait();
 		return f.get();
 	}
+
+    std::string codec::to_string(error_code_t ec)
+    {
+        switch (ec)
+        {
+            case SUCCESS: return "SUCCESS";
+            case WOULD_BLOCK: return "WOULD_BLOCK";
+            case NOT_FOUND: return "NOT_FOUND";
+            case NO_CONNECTION: return "NO_CONNECTION";
+            case INTERNAL_SERVER_ERROR: return "INTERNAL_SERVER_ERROR";
+        };
+        return "UNKNOWN_ERROR:" + ec;
+    }
 };

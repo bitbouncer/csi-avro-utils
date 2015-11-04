@@ -6,8 +6,10 @@ namespace confluent
 	class codec
 	{
 	public:
-		enum { SUCCESS = 0, WOULD_BLOCK = 1, NOT_FOUND = 2, NO_CONNECTION = 3, INTERNAL_SERVER_ERROR=4 };
+        enum error_code_t { SUCCESS = 0, WOULD_BLOCK = 1, NOT_FOUND = 2, NO_CONNECTION = 3, INTERNAL_SERVER_ERROR = 4 };
 		
+        static std::string to_string(error_code_t);
+
 		struct decode_result
 		{
 			decode_result() : ec(SUCCESS) {}
