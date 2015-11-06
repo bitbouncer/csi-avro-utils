@@ -82,7 +82,7 @@ namespace confluent
     {
         std::shared_ptr<csi::http_client::call_context> p(new csi::http_client::call_context(method, uri, headers, timeout));
         csi::json_spirit_encode(request, p->tx_content());
-        std::cerr << to_string(p->tx_content()) << std::endl;
+        //std::cerr << to_string(p->tx_content()) << std::endl;
         return p;
     }
 
@@ -109,25 +109,25 @@ namespace confluent
             int32_t result=0;
             if (state->http_result() >= 200 && state->http_result() < 300)
             {
-                BOOST_LOG_TRIVIAL(debug) << "confluent::registry::put on_complete data: " << state->uri() << " got " << state->rx_content_length() << " bytes" << std::endl;
+                BOOST_LOG_TRIVIAL(trace) << "confluent::registry::put_schema on_complete data: " << state->uri() << " got " << state->rx_content_length() << " bytes";
                 register_new_schema_resp resp;
                 if (csi::json_spirit_decode(state->rx_content(), resp))
                 {
-                    std::cerr << "id:" << resp.id << std::endl;
+                    BOOST_LOG_TRIVIAL(trace) << "confluent::registry::put_schema returned id:" << resp.id;
                     result = resp.id;
                     cb(state, resp.id);
                     return;
                 }
                 else
                 {
-                    BOOST_LOG_TRIVIAL(error) << "confluent::registry::put return value unexpected: " << to_string(state->rx_content());
+                    BOOST_LOG_TRIVIAL(error) << "confluent::registry::put_schema return value unexpected: " << to_string(state->rx_content());
                     cb(state, -1); // fix a bad state here!!!
                     return;
                 }
             }
             else
             {
-                BOOST_LOG_TRIVIAL(error) << "confluent::registry::put on_complete data: " << state->uri() << " HTTPRES = " << state->http_result();
+                BOOST_LOG_TRIVIAL(error) << "confluent::registry::put_schema on_complete data: " << state->uri() << " HTTPRES = " << state->http_result();
             }
             cb(state, -1);
         });
