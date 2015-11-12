@@ -43,7 +43,6 @@ inline std::string to_string(std::auto_ptr<avro::InputStream> pstream)
 */
 
 std::string        to_string(const avro::OutputStream& os);
-std::string        normalize(const avro::ValidSchema&);
 boost::uuids::uuid generate_hash(const avro::ValidSchema&);
-
-
+std::string        to_string(const avro::ValidSchema& vs);
+std::string        normalize(const avro::ValidSchema&);
