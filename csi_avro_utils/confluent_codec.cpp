@@ -1,12 +1,67 @@
 #include <future>
 #include "confluent_codec.h"
 #include <boost/make_shared.hpp>
+#include <boost/endian/arithmetic.hpp>
 
 namespace confluent
 {
+    static bool write_raw(avro::OutputStream& dst, uint8_t* src, size_t len)
+    {
+        size_t remaining = len;
+        const uint8_t* cursor = src;
+        while (remaining)
+        {
+            uint8_t* buf = NULL;
+            size_t capacity = 0;
+            if (!dst.next(&buf, &capacity))
+                return false;
+            size_t bytes2write = std::min<size_t>(remaining, capacity);
+            memcpy(buf, cursor, bytes2write);
+            remaining -= bytes2write;
+            size_t not_used = capacity - bytes2write;
+            if (not_used)
+                dst.backup(not_used);
+        }
+        return true;
+    }
+
+    static bool read_raw(avro::InputStream* src, uint8_t* dst, size_t len)
+    {
+        size_t remaining = len;
+        uint8_t* cursor = dst;
+        while (remaining)
+        {
+            const uint8_t* buf = NULL;
+            size_t capacity = 0;
+            if (!src->next(&buf, &capacity))
+                return false;
+            size_t bytes2read = std::min<size_t>(remaining, capacity);
+            memcpy(cursor, buf, bytes2read);
+            remaining -= bytes2read;
+            size_t not_used = capacity - bytes2read;
+            if (not_used)
+                src->backup(not_used);
+        }
+        return true;
+    }
+
 	codec::codec(confluent::registry& r) : _registry(r)
 	{
 	}
+
+    void codec::encode_schema_id(int32_t id, avro::OutputStream& dst)
+    {
+        int32_t be_id = boost::endian::native_to_big<int32_t>(id);
+        write_raw(dst, (uint8_t*)&be_id, 4);
+    }
+
+    int32_t codec::decode_schema_id(avro::InputStream* src)
+    {
+        int32_t be;
+        if (!read_raw(src, (uint8_t*)&be, 4))
+            return -1;
+        return boost::endian::big_to_native<int32_t>(be);
+    }
 
 	void codec::put_schema(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, put_callback cb)
 	{
@@ -88,10 +143,11 @@ namespace confluent
 		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>>::const_iterator item = _id2schema.find(id);
 		assert(item != _id2schema.end());
 #endif
-		avro::EncoderPtr e = avro::binaryEncoder();
-		e->init(dst);
-		avro::encode(*e, id);
-		avro::encode(*e, *src);
+        encode_schema_id(id, dst);
+        avro::EncoderPtr e = avro::binaryEncoder();
+        e->init(dst);
+
+        avro::encode(*e, *src);
 		// push back unused characters to the output stream again... really strange... 			
 		// otherwise content_length will be a multiple of 4096
 		e->flush();
@@ -104,9 +160,10 @@ namespace confluent
 		if (item == _schema2id.end())
 			return WOULD_BLOCK;
 
+        encode_schema_id(item->second, dst);
 		avro::EncoderPtr e = avro::binaryEncoder();
 		e->init(dst);
-		avro::encode(*e, item->second);
+		//avro::encode(*e, item->second);
 		avro::encode(*e, *src);
 		// push back unused characters to the output stream again... really strange... 			
 		// otherwise content_length will be a multiple of 4096
@@ -126,9 +183,9 @@ namespace confluent
 
 			if (result.second > 0)
 			{
+                encode_schema_id(result.second, *dst);
 				avro::EncoderPtr e = avro::binaryEncoder();
 				e->init(*dst);
-				avro::encode(*e, result.second);
 				avro::encode(*e, *src);
 				// push back unused characters to the output stream again... really strange... 			
 				// otherwise content_length will be a multiple of 4096
@@ -156,9 +213,7 @@ namespace confluent
 	{
 		avro::DecoderPtr decoder = avro::binaryDecoder();
 		decoder->init(*stream);
-		int32_t schema_id = 0;
-		avro::decode(*decoder, schema_id);
-
+        int32_t schema_id = decode_schema_id(stream);
 		//mutex..
 		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>>::const_iterator item = _id2schema.find(schema_id);
 		if (item == _id2schema.end())
@@ -176,9 +231,7 @@ namespace confluent
 	{
 		avro::DecoderPtr decoder = avro::binaryDecoder();
 		decoder->init(*stream);
-		int32_t schema_id = 0;
-		avro::decode(*decoder, schema_id);
-
+        int32_t schema_id = decode_schema_id(stream);
 		get_schema(schema_id, [decoder, cb](get_schema_result res)
 		{
 			if (res.first) // ec

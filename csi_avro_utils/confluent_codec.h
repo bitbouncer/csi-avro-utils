@@ -43,6 +43,10 @@ namespace confluent
 		void    encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst, encode_callback);
 		int32_t encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst);
 
+        // this is BE written as 4 bytes
+        static void    encode_schema_id(int32_t schema_id, avro::OutputStream& dst);
+        static int32_t decode_schema_id(avro::InputStream* src);
+
 		template<typename T>
         void encode_nonblock(int32_t schema_id, const T& value, avro::OutputStream& dst)
 		{
@@ -51,9 +55,10 @@ namespace confluent
             std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(schema_id);
 			assert(item != _id2schema.end());
 #endif
-			avro::EncoderPtr e = avro::binaryEncoder();
+            encode_schema_id(schema_id, dst);
+
+            avro::EncoderPtr e = avro::binaryEncoder();
 			e->init(dst);
-            avro::encode(*e, schema_id);
             avro::encode(*e, value);
 			// push back unused characters to the output stream again... really strange... 			
 			// otherwise content_length will be a multiple of 4096
@@ -89,9 +94,10 @@ namespace confluent
 			int32_t schema_id;
 			avro::DecoderPtr e = avro::binaryDecoder();
 			e->init(*src);
-			
-			avro::decode(*e, schema_id);
-			if (id != schema_id)
+            
+            schema_id = decode_schema_id(src);
+
+            if (id != schema_id)
 			{
 				return false;
 			}

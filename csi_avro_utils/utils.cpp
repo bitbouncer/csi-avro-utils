@@ -17,6 +17,13 @@ std::string to_string(const avro::OutputStream& os)
     return res;
 }
 
+std::string to_string(const avro::ValidSchema& vs)
+{
+    std::stringstream ss;
+    vs.toJson(ss);
+    return ss.str();
+}
+
 std::string normalize(const avro::ValidSchema& vs)
 {
     std::stringstream ss;
