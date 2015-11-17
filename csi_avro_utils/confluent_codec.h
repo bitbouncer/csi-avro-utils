@@ -79,13 +79,13 @@ namespace confluent
 		}
 
         template<typename T>
-		bool decode_static(avro::InputStream* src, int32_t id, T& dst)
+		static bool decode_static(avro::InputStream* src, int32_t id, T& dst)
 		{
-#ifdef _DEBUG
-			//mutex..
-			std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(id);
-			assert(item != _id2schema.end());
-#endif
+//#ifdef _DEBUG
+//			//mutex..
+//			std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(id);
+//			assert(item != _id2schema.end());
+//#endif
 			int32_t schema_id;
 			avro::DecoderPtr e = avro::binaryDecoder();
 			e->init(*src);
@@ -112,7 +112,7 @@ namespace confluent
 		decode_result decode_datum(avro::InputStream* src);
 
         template<typename T>
-        inline bool decode_static(const uint8_t* src, size_t len, int32_t id, T& dst)
+        inline static bool decode_static(const uint8_t* src, size_t len, int32_t id, T& dst)
         {
             std::auto_ptr<avro::InputStream> stream = avro::memoryInputStream(src, len);
             return decode_static(&*stream, id, dst);
