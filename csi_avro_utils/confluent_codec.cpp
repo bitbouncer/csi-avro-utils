@@ -49,6 +49,20 @@ namespace confluent
 	{
 	}
 
+    void codec::encode_magic(avro::OutputStream& dst)
+    {
+        uint8_t byte = CONFLUENT_MAGIC_BYTE;
+        write_raw(dst, &byte, 1);
+    }
+
+    uint8_t codec::decode_magic(avro::InputStream* src)
+    {
+        uint8_t magic;
+        if (!read_raw(src, (uint8_t*)&magic, 1))
+            return 0xFF;
+        return magic;
+    }
+
     void codec::encode_schema_id(int32_t id, avro::OutputStream& dst)
     {
         int32_t be_id = boost::endian::native_to_big<int32_t>(id);
@@ -143,6 +157,8 @@ namespace confluent
 		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>>::const_iterator item = _id2schema.find(id);
 		assert(item != _id2schema.end());
 #endif
+
+        encode_magic(dst);
         encode_schema_id(id, dst);
         avro::EncoderPtr e = avro::binaryEncoder();
         e->init(dst);
@@ -160,6 +176,7 @@ namespace confluent
 		if (item == _schema2id.end())
 			return WOULD_BLOCK;
 
+        encode_magic(dst);
         encode_schema_id(item->second, dst);
 		avro::EncoderPtr e = avro::binaryEncoder();
 		e->init(dst);
@@ -183,6 +200,7 @@ namespace confluent
 
 			if (result.second > 0)
 			{
+                encode_magic(*dst);
                 encode_schema_id(result.second, *dst);
 				avro::EncoderPtr e = avro::binaryEncoder();
 				e->init(*dst);
@@ -213,6 +231,10 @@ namespace confluent
 	{
 		avro::DecoderPtr decoder = avro::binaryDecoder();
 		decoder->init(*stream);
+
+        if (decode_magic(stream) != CONFLUENT_MAGIC_BYTE)
+            return codec::decode_result(NOT_AVRO, NULL, NULL);
+
         int32_t schema_id = decode_schema_id(stream);
 		//mutex..
 		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>>::const_iterator item = _id2schema.find(schema_id);
@@ -231,6 +253,10 @@ namespace confluent
 	{
 		avro::DecoderPtr decoder = avro::binaryDecoder();
 		decoder->init(*stream);
+
+        if (decode_magic(stream) != CONFLUENT_MAGIC_BYTE)
+            cb(codec::decode_result(NOT_AVRO, NULL, NULL));
+
         int32_t schema_id = decode_schema_id(stream);
 		get_schema(schema_id, [decoder, cb](get_schema_result res)
 		{
@@ -274,6 +300,7 @@ namespace confluent
             case NOT_FOUND: return "NOT_FOUND";
             case NO_CONNECTION: return "NO_CONNECTION";
             case INTERNAL_SERVER_ERROR: return "INTERNAL_SERVER_ERROR";
+            case NOT_AVRO: return "NOT_AVRO";
         };
         return "UNKNOWN_ERROR:" + ec;
     }

@@ -1,12 +1,21 @@
 #include "confluent_schema_registry.h"
 #pragma once
 
+
+/*
+    encoding format 
+    byte0   -> 0 (magic)
+    byte1-4 -> big endian encoded shema id
+    byte5-N -> avro encoded message 
+*/
+
 namespace confluent
 {
 	class codec
 	{
 	public:
-        enum error_code_t { SUCCESS = 0, WOULD_BLOCK = 1, NOT_FOUND = 2, NO_CONNECTION = 3, INTERNAL_SERVER_ERROR = 4 };
+        enum error_code_t { SUCCESS = 0, WOULD_BLOCK = 1, NOT_FOUND = 2, NO_CONNECTION = 3, INTERNAL_SERVER_ERROR = 4, NOT_AVRO=5 };
+        enum { CONFLUENT_MAGIC_BYTE=0x0 };
 		
         static std::string to_string(error_code_t);
 
@@ -43,9 +52,6 @@ namespace confluent
 		void    encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst, encode_callback);
 		int32_t encode(const std::string& name, boost::shared_ptr<avro::ValidSchema> schema, boost::shared_ptr<avro::GenericDatum> src, avro::OutputStream* dst);
 
-        // this is BE written as 4 bytes
-        static void    encode_schema_id(int32_t schema_id, avro::OutputStream& dst);
-        static int32_t decode_schema_id(avro::InputStream* src);
 
 		template<typename T>
         void encode_nonblock(int32_t schema_id, const T& value, avro::OutputStream& dst)
@@ -55,25 +61,13 @@ namespace confluent
             std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(schema_id);
 			assert(item != _id2schema.end());
 #endif
+            encode_magic(dst);
             encode_schema_id(schema_id, dst);
-
             avro::EncoderPtr e = avro::binaryEncoder();
 			e->init(dst);
             avro::encode(*e, value);
-			// push back unused characters to the output stream again... really strange... 			
-			// otherwise content_length will be a multiple of 4096
-			e->flush();
+			e->flush(); // push back unused characters to the output stream again - otherwise content_length will be a multiple of 4096
 		}
-
-        //does this work? with the memoryOutputStream being a local and returning a memoryInputStream???? NOPE! 
-        //template<typename T>
-        //std::auto_ptr<avro::InputStream> encode_nonblock(int32_t schema_id, const T& value)
-        //{
-        //    auto ostr = avro::memoryOutputStream();
-        //    encode_nonblock(schema_id, value, *ostr);
-        //    size_t sz = ostr->byteCount();
-        //    return avro::memoryInputStream(*ostr);
-        //}
 
 		template<typename T>
 		std::auto_ptr<avro::OutputStream> encode_nonblock(int32_t schema_id, const T& value)
@@ -83,19 +77,17 @@ namespace confluent
 			return ostr;
 		}
 
+        // change to error code bad magic, wrong schema etc
         template<typename T>
 		static bool decode_static(avro::InputStream* src, int32_t id, T& dst)
 		{
-//#ifdef _DEBUG
-//			//mutex..
-//			std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> ::const_iterator item = _id2schema.find(id);
-//			assert(item != _id2schema.end());
-//#endif
-			int32_t schema_id;
 			avro::DecoderPtr e = avro::binaryDecoder();
 			e->init(*src);
             
-            schema_id = decode_schema_id(src);
+            if (decode_magic(src) != CONFLUENT_MAGIC_BYTE)
+                return false;
+
+            int32_t schema_id = decode_schema_id(src);
 
             if (id != schema_id)
 			{
@@ -143,6 +135,13 @@ namespace confluent
         }
 
 	private:
+        static void    encode_magic(avro::OutputStream& dst);
+        static uint8_t decode_magic(avro::InputStream* src);
+
+        // this is BE written as 4 bytes
+        static void    encode_schema_id(int32_t schema_id, avro::OutputStream& dst);
+        static int32_t decode_schema_id(avro::InputStream* src);
+
 		confluent::registry&                                    _registry;
 		std::map<boost::shared_ptr<avro::ValidSchema>, int32_t> _schema2id;
 		std::map<int32_t, boost::shared_ptr<avro::ValidSchema>> _id2schema;
