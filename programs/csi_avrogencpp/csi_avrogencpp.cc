@@ -130,6 +130,15 @@ static string decorate(const avro::Name& name)
     return name.simpleName();
 }
 
+static set<string> s_protected_words = { "explicit" };
+
+static string decorate_reserved_words(const string& name)
+{
+    if (s_protected_words.find(name) != s_protected_words.end())
+        return "xxx_" + name;
+    return name;
+}
+
 string CodeGen::fullname(const string& name) const
 {
     return ns_.empty() ? name : (ns_ + "::" + name);
@@ -141,7 +150,7 @@ string CodeGen::generateEnumType(const NodePtr& n)
     os_ << "enum " << s << " {\n";
     size_t c = n->names();
     for (size_t i = 0; i < c; ++i) {
-        os_ << "    " << n->nameAt(i) << ",\n";
+        os_ << "    " << decorate_reserved_words(n->nameAt(i)) << ",\n";
     }
     os_ << "};\n\n";
     return s;
@@ -239,17 +248,17 @@ string CodeGen::generateRecordType(const NodePtr& n)
         for (size_t i = 0; i < c; ++i) {
             if (n->leafAt(i)->type() == avro::AVRO_UNION) {
                 os_ << "    typedef " << types[i]
-                    << ' ' << n->nameAt(i) << "_t;\n";
+                    << ' ' << decorate_reserved_words(n->nameAt(i)) << "_t;\n";
             }
         }
     }
     for (size_t i = 0; i < c; ++i) {
         if (! noUnion_ && n->leafAt(i)->type() == avro::AVRO_UNION) {
-            os_ << "    " << n->nameAt(i) << "_t";
+            os_ << "    " << decorate_reserved_words(n->nameAt(i)) << "_t";
         } else {
             os_ << "    " << types[i];
         }
-        os_ << ' ' << n->nameAt(i) << ";\n";
+        os_ << ' ' << decorate_reserved_words(n->nameAt(i)) << ";\n";
     }
 
     os_ << "    " << decoratedName << "()";
@@ -258,9 +267,9 @@ string CodeGen::generateRecordType(const NodePtr& n)
     }
     os_ << "\n";
     for (size_t i = 0; i < c; ++i) {
-        os_ << "        " << n->nameAt(i) << "(";
+        os_ << "        " << decorate_reserved_words(n->nameAt(i)) << "(";
         if (! noUnion_ && n->leafAt(i)->type() == avro::AVRO_UNION) {
-            os_ << n->nameAt(i) << "_t";
+            os_ << decorate_reserved_words(n->nameAt(i)) << "_t";
         } else {
             os_ << types[i];
         }
@@ -523,14 +532,14 @@ void CodeGen::generateEnumTraits(const NodePtr& n)
 	{
 		first = ns_;
 		first += "::";
-		first += n->nameAt(0);
+        first += decorate_reserved_words(n->nameAt(0));
 
 		last = ns_;
 		last += "::";
-		last += n->nameAt(c-1);
+        last += decorate_reserved_words(n->nameAt(c - 1));
 	} else {
-		first = n->nameAt(0);
-		last = n->nameAt(c-1);
+        first = decorate_reserved_words(n->nameAt(0));
+        last = decorate_reserved_words(n->nameAt(c - 1));
 	}
 	os_ << "template<> struct codec_traits<" << fn << "> {\n"
 		<< "    static void encode(Encoder& e, " << fn << " v) {\n"
@@ -567,7 +576,7 @@ void CodeGen::generateRecordTraits(const NodePtr& n)
         << "    static void encode(Encoder& e, const " << fn << "& v) {\n";
 
     for (size_t i = 0; i < c; ++i) {
-        os_ << "        avro::encode(e, v." << n->nameAt(i) << ");\n";
+        os_ << "        avro::encode(e, v." << decorate_reserved_words(n->nameAt(i)) << ");\n";
     }
 
     os_ << "    }\n"
@@ -580,7 +589,7 @@ void CodeGen::generateRecordTraits(const NodePtr& n)
     os_ << "                switch (*it) {\n";
     for (size_t i = 0; i < c; ++i) {
         os_ << "                case " << i << ":\n";
-        os_ << "                    avro::decode(d, v." << n->nameAt(i) << ");\n";
+        os_ << "                    avro::decode(d, v." << decorate_reserved_words(n->nameAt(i)) << ");\n";
         os_ << "                    break;\n";
     }
     os_ << "                default:\n";
@@ -590,7 +599,7 @@ void CodeGen::generateRecordTraits(const NodePtr& n)
     os_ << "        } else {\n";
 
     for (size_t i = 0; i < c; ++i) {
-        os_ << "            avro::decode(d, v." << n->nameAt(i) << ");\n";
+        os_ << "            avro::decode(d, v." << decorate_reserved_words(n->nameAt(i)) << ");\n";
     }
     os_ << "        }\n";
 
