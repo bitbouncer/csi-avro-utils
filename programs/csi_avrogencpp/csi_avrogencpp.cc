@@ -130,12 +130,12 @@ static string decorate(const avro::Name& name)
     return name.simpleName();
 }
 
-static set<string> s_protected_words = { "explicit" };
+static set<string> s_protected_words = { "explicit", "public" };
 
 static string decorate_reserved_words(const string& name)
 {
     if (s_protected_words.find(name) != s_protected_words.end())
-        return "xxx_" + name;
+        return "_rsvd_" + name;
     return name;
 }
 
@@ -655,6 +655,7 @@ void CodeGen::generateUnionTraits(const NodePtr& n)
                 << "                " << cppTypeOf(nn) << " vv;\n"
                 << "                avro::decode(d, vv);\n"
                 << "                v.set_" << cppNameOf(nn) << "(vv);\n"
+				<< "                d.decodeUnionEnd();\n"
                 << "            }\n";
         }
         os_ << "            break;\n";
