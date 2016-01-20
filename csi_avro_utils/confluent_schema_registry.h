@@ -1,8 +1,7 @@
 #include <map>
-#include <csi_http/client/http_client.h>
 #include <avro/Generic.hh>
 #include <avro/Schema.hh>
-
+#include <csi_http_client/http_client.h>
 #pragma once
 
 namespace confluent
