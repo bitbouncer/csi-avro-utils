@@ -283,7 +283,7 @@ string CodeGen::generateRecordType(const NodePtr& n)
 
     //extension
     //should only be here for root level - how??
-    if (n->name().fullname() == root_name_)
+    //if (n->name().fullname() == root_name_)
     {
         os_ << "//  avro extension\n";
         os_ << "    static inline const boost::uuids::uuid      schema_hash()      { static const boost::uuids::uuid _hash(boost::uuids::string_generator()(\"" << to_string(hash_) << "\")); return _hash; }\n";
