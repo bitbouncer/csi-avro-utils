@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
-INCLUDE(${CMAKE_SOURCE_DIR}/../build-scripts/CMakeDependencies.txt)
+cmake_minimum_required(VERSION 2.8.1)
 
 if(WIN32)
 set(EXT_LIBS csi-avro-utils ${CSI_HTTP_CLIENT_LIBS}) 
