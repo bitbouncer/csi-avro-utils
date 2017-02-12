@@ -61,20 +61,12 @@ unzip boost_1_62_0.zip
 rename boost_1_62_0 boost
 
 git clone https://github.com/madler/zlib.git
-git clone https://github.com/lz4/lz4.git
 git clone https://github.com/openssl/openssl.git
+git clone https://github.com/bitbouncer/avro.git
 git clone https://github.com/bitbouncer/csi-avro-utils.git
 
 set VISUALSTUDIO_VERSION_MAJOR=14
 call "C:\Program Files (x86)\Microsoft Visual Studio %VISUALSTUDIO_VERSION_MAJOR%.0\VC\vcvarsall.bat" amd64
-
-cd openssl
-#git checkout OpenSSL_1_1_0c
-perl Configure VC-WIN64A
-nmake
-#you need to be Administrator for the next step)
-nmake install 
-cd ..
 
 cd zlib
 mkdir build & cd build
@@ -82,6 +74,14 @@ cmake -G "Visual Studio 14 Win64" ..
 msbuild zlib.sln
 msbuild zlib.sln /p:Configuration=Release
 cd ../..
+
+cd openssl
+#git checkout OpenSSL_1_1_0c
+perl Configure VC-WIN64A
+nmake 
+#you need to be Administrator for the next step)
+nmake install 
+cd ..
 
 cd boost
 call bootstrap.bat
