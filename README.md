@@ -23,9 +23,7 @@ sudo ./build.sh install
 
 git clone https://github.com/bitbouncer/csi-avro-utils.git
 cd csi-avro-utils
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make
+bash rebuild_linux.sh
 cd ..
 ```
 
