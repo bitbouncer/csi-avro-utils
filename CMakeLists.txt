@@ -37,7 +37,7 @@ add_definitions(/wd4200) #nonstandard extension used : zero-sized array in struc
 add_definitions(-DLIBRDKAFKA_STATICLIB)
 add_definitions(-DBOOST_ALL_STATIC_LINK)
 
-SET(EXT_LIBS csi-avro-utils csi-avro ${CSI_BOOST_LIBS} libssl libcrypto ${ZLIB_LIBS} crypt32 Ws2_32 legacy_stdio_definitions)
+SET(EXT_LIBS csi-avro-utils csi-avrocpp ${CSI_BOOST_LIBS} libssl libcrypto ${ZLIB_LIBS} crypt32 Ws2_32 legacy_stdio_definitions)
 
 elseif(APPLE)
 add_definitions(-DBOOST_LOG_DYN_LINK)
@@ -47,7 +47,7 @@ set(LIBRARY_OUTPUT_PATH     ${CMAKE_SOURCE_DIR}/lib)
 SET(EXECUTABLE_OUTPUT_PATH  ${CMAKE_SOURCE_DIR}/bin)
 
 set(CSI_BOOST_LIBS boost_log_setup boost_log-mt boost_date_time boost_timer boost_thread-mt boost_system boost_program_options boost_filesystem boost_regex boost_chrono boost_iostreams pthread c)
-SET(EXT_LIBS csi-avro-utils avro ${CSI_BOOST_LIBS} crypto ssl)
+SET(EXT_LIBS csi-avro-utils avrocpp ${CSI_BOOST_LIBS} crypto ssl)
 
 elseif(ALPINE_LINUX)
 
@@ -63,7 +63,7 @@ add_definitions(-Wno-deprecated)
 
 #boost_thread
 set(CSI_BOOST_LIBS boost_log_setup boost_log-mt boost_date_time boost_timer boost_system boost_program_options boost_filesystem boost_regex boost_chrono boost_iostreams pthread rt c)
-SET(EXT_LIBS csi-avro-utils avro ${CSI_BOOST_LIBS} crypto ssl)
+SET(EXT_LIBS csi-avro-utils avrocpp ${CSI_BOOST_LIBS} crypto ssl)
 else()
 #LINUX
 set(LIBRARY_OUTPUT_PATH     ${CMAKE_SOURCE_DIR}/lib)
@@ -77,7 +77,7 @@ add_definitions(-Wno-deprecated)
 
 #boost_thread
 set(CSI_BOOST_LIBS boost_log_setup boost_log boost_date_time boost_timer boost_system boost_program_options boost_filesystem boost_regex boost_chrono boost_iostreams pthread rt c)
-SET(EXT_LIBS csi-avro-utils avro ${CSI_BOOST_LIBS} crypto ssl)
+SET(EXT_LIBS csi-avro-utils avrocpp ${CSI_BOOST_LIBS} crypto ssl)
 endif() 
 
 if(WIN32)
@@ -97,7 +97,7 @@ file(MAKE_DIRECTORY ${AVROCPP_PATH}/include/avro/buffer)
 file(COPY ${CSI_AVRO_H} DESTINATION ${AVROCPP_PATH}/include/avro)
 file(COPY ${CSI_AVRO_BUFFER_H} DESTINATION ${AVROCPP_PATH}/include/avro/buffer)
 ADD_LIBRARY(csi-avro STATIC ${CSI_AVRO_CC} ${CSI_AVRO_H} ${CSI_AVRO_BUFFER_H})
-TARGET_INCLUDE_DIRECTORIES(csi-avro PRIVATE ${AVROCPP_PATH}/api ${CSI_INCLUDE_PATH})
+TARGET_INCLUDE_DIRECTORIES(csi-avrocpp PRIVATE ${AVROCPP_PATH}/api ${CSI_INCLUDE_PATH})
 endif()
 
 include_directories(${CSI_INCLUDE_PATH} ${CMAKE_SOURCE_DIR})

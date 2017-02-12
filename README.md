@@ -15,6 +15,11 @@ sudo apt-get install -y automake autogen shtool libtool git wget cmake unzip bui
 ```
 Build
 ```
+wget --no-check-certificate http://apache.mirrors.spacedump.net/avro/avro-1.8.1/cpp/avro-cpp-1.8.1.tar.gz
+tar xfv avro-cpp-1.8.1.tar.gz
+cd avro-cpp-1.8.1
+./build.sh test
+sudo ./build.sh install
 
 git clone https://github.com/bitbouncer/csi-avro-utils.git
 cd csi-avro-utils
